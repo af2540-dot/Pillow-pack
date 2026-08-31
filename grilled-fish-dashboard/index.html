@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pillow Pack - แดชบอร์ดติดตามการผลิตปลาข้างเหลืองย่าง</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body data-theme="dark">
+    <!-- Decorative Glowing Backgrounds -->
+    <div class="bg-glow-1"></div>
+    <div class="bg-glow-2"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="brand-section">
+                <h1>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-color);">
+                        <path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"></path>
+                        <path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"></path>
+                        <path d="M12 2v2"></path>
+                        <path d="M12 20v2"></path>
+                        <path d="M20 12h2"></path>
+                        <path d="M2 12h2"></path>
+                    </svg>
+                    Pillow Pack Dashboard
+                </h1>
+                <p>ระบบบันทึกและติดตามการผลิตปลาข้างเหลืองย่างรายวันอย่างแม่นยำ</p>
+            </div>
+            
+            <div class="actions-section">
+                <!-- Export/Import buttons -->
+                <button id="btn-export" class="btn" title="ส่งออกข้อมูลสำรอง (JSON)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    ส่งออกข้อมูล
+                </button>
+                <button id="btn-import-trigger" class="btn" title="นำเข้าข้อมูลจากไฟล์สำรอง">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    นำเข้าข้อมูล
+                </button>
+                <input type="file" id="import-file" accept=".json" style="display: none;">
+
+                <!-- Theme Toggle Button -->
+                <button id="theme-toggle" class="btn btn-icon" title="เปลี่ยนโหมดสี">
+                    <svg id="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Report Metadata Card -->
+        <section class="card report-meta-card">
+            <div class="meta-group">
+                <div class="meta-item">
+                    <span class="meta-label">ลูกค้า (Customer):</span>
+                    <span class="meta-value">Shenzhen Yue Tai</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Invoice No.:</span>
+                    <span class="meta-value">SSPEP-SES-020/2026</span>
+                </div>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">วันที่รายงาน:</span>
+                <span id="report-view-date" class="meta-value">-</span>
+            </div>
+        </section>
+
+        <!-- KPI Summary Cards -->
+        <section class="summary-grid">
+            <!-- Total Production Progress -->
+            <div class="card summary-card kpi-total">
+                <div class="card-title">ความคืบหน้าการผลิตรวม</div>
+                <div id="kpi-progress-percent" class="card-value">0%</div>
+                <div class="card-subtext">
+                    <span id="kpi-progress-text">ผลิตแล้ว 0 / 550 กล่อง</span>
+                    <span id="kpi-progress-weight">0.0 / 495.0 kg (สำเร็จรูป)</span>
+                </div>
+            </div>
+
+            <!-- Average Efficiency (Yield) -->
+            <div class="card summary-card kpi-yield">
+                <div class="card-title">ประสิทธิภาพการผลิตรวม (Yield)</div>
+                <div id="kpi-yield-percent" class="card-value">0.0%</div>
+                <div class="card-subtext">
+                    <span>เป้าหมายเฉลี่ย ~81.3%</span>
+                    <span id="kpi-yield-status" class="yield-badge">ไม่มีข้อมูล</span>
+                </div>
+            </div>
+
+            <!-- Raw Material Remaining -->
+            <div class="card summary-card kpi-remaining">
+                <div class="card-title">วัตถุดิบปลาย่างที่ยังต้องใช้เพิ่ม</div>
+                <div id="kpi-raw-remaining" class="card-value">610 kg</div>
+                <div class="card-subtext">
+                    <span id="kpi-days-left">กำลังผลิตเป้าหมาย 60 kg/วัน</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Product Cards (3 Flavors) -->
+        <section class="products-section">
+            <!-- Original Flavor -->
+            <div class="card product-card original">
+                <div>
+                    <div class="product-header">
+                        <div class="product-title">รสดั้งเดิม (Original)</div>
+                        <span class="badge badge-original">เป้าหมาย 200 กล่อง</span>
+                    </div>
+                    
+                    <div class="progress-container">
+                        <div class="progress-info">
+                            <span>ความสำเร็จ</span>
+                            <span id="orig-progress-label">0%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div id="orig-progress-bar" class="progress-bar-fill"></div>
+                        </div>
+                    </div>
+
+                    <div class="metrics-list">
+                        <div class="metric-item">
+                            <span class="metric-label">วัตถุดิบที่ใช้ไปแล้ว</span>
+                            <span id="orig-raw-used" class="metric-value">0 / 220 kg</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">ผลิตได้สำเร็จ</span>
+                            <span id="orig-boxes-prod" class="metric-value">0 / 200 กล่อง</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">วัตถุดิบที่ต้องใช้เพิ่ม</span>
+                            <span id="orig-raw-rem" class="metric-value">220.0 kg</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">เวลาที่คาดว่าต้องใช้เพิ่ม</span>
+                            <span id="orig-days-rem" class="metric-value">3.67 วัน</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Spicy Flavor -->
+            <div class="card product-card spicy">
+                <div>
+                    <div class="product-header">
+                        <div class="product-title">รสเผ็ด (Spicy)</div>
+                        <span class="badge badge-spicy">เป้าหมาย 200 กล่อง</span>
+                    </div>
+                    
+                    <div class="progress-container">
+                        <div class="progress-info">
+                            <span>ความสำเร็จ</span>
+                            <span id="spicy-progress-label">0%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div id="spicy-progress-bar" class="progress-bar-fill"></div>
+                        </div>
+                    </div>
+
+                    <div class="metrics-list">
+                        <div class="metric-item">
+                            <span class="metric-label">วัตถุดิบที่ใช้ไปแล้ว</span>
+                            <span id="spicy-raw-used" class="metric-value">0 / 220 kg</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">ผลิตได้สำเร็จ</span>
+                            <span id="spicy-boxes-prod" class="metric-value">0 / 200 กล่อง</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">วัตถุดิบที่ต้องใช้เพิ่ม</span>
+                            <span id="spicy-raw-rem" class="metric-value">220.0 kg</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">เวลาที่คาดว่าต้องใช้เพิ่ม</span>
+                            <span id="spicy-days-rem" class="metric-value">3.67 วัน</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Black Pepper Flavor -->
+            <div class="card product-card pepper">
+                <div>
+                    <div class="product-header">
+                        <div class="product-title">รสพริกไทยดำ (Pepper)</div>
+                        <span class="badge badge-pepper">เป้าหมาย 150 กล่อง</span>
+                    </div>
+                    
+                    <div class="progress-container">
+                        <div class="progress-info">
+                            <span>ความสำเร็จ</span>
+                            <span id="pep-progress-label">0%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div id="pep-progress-bar" class="progress-bar-fill"></div>
+                        </div>
+                    </div>
+
+                    <div class="metrics-list">
+                        <div class="metric-item">
+                            <span class="metric-label">วัตถุดิบที่ใช้ไปแล้ว</span>
+                            <span id="pep-raw-used" class="metric-value">0 / 170 kg</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">ผลิตได้สำเร็จ</span>
+                            <span id="pep-boxes-prod" class="metric-value">0 / 150 กล่อง</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">วัตถุดิบที่ต้องใช้เพิ่ม</span>
+                            <span id="pep-raw-rem" class="metric-value">170.0 kg</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">เวลาที่คาดว่าต้องใช้เพิ่ม</span>
+                            <span id="pep-days-rem" class="metric-value">2.83 วัน</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Chart and Form Panel -->
+        <div class="main-grid">
+            <!-- Chart Panel -->
+            <div class="card chart-card">
+                <div class="chart-tabs">
+                    <button class="chart-tab active" data-chart="overall">ความคืบหน้าการผลิตจริงเทียบเป้าหมาย</button>
+                    <button class="chart-tab" data-chart="daily-trend">แนวโน้มผลิตรายวัน (kg)</button>
+                    <button class="chart-tab" data-chart="yield-rate">ประสิทธิภาพ Yield (%)</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="productionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Data Logging Form -->
+            <div class="card">
+                <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: var(--spacing-sm);">บันทึกข้อมูลการผลิตรายวัน</h3>
+                <form id="prod-form" onsubmit="return false;">
+                    <!-- Date Selection -->
+                    <div class="form-group">
+                        <label for="prod-date">วันที่ผลิต</label>
+                        <input type="date" id="prod-date" class="form-control" required>
+                    </div>
+
+                    <!-- Flavor Selection -->
+                    <div class="form-group">
+                        <label for="prod-flavor">รสชาติสินค้า</label>
+                        <select id="prod-flavor" class="form-control" required>
+                            <option value="" disabled selected>-- เลือกโหมดรสชาติ --</option>
+                            <option value="original">รสดั้งเดิม</option>
+                            <option value="spicy">รสเผ็ด</option>
+                            <option value="pepper">รสพริกไทยดำ</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <!-- Raw Material Input -->
+                        <div class="form-group">
+                            <label for="prod-raw-weight">ใช้วัตถุดิบปลาย่าง (kg)</label>
+                            <input type="number" id="prod-raw-weight" class="form-control" step="0.01" min="0.01" placeholder="ตัวอย่าง: 60" required>
+                            <div class="form-helper">เป้าผลิตเฉลี่ย: 60 kg/วัน</div>
+                        </div>
+
+                        <!-- Box Produced Input -->
+                        <div class="form-group">
+                            <label for="prod-boxes">จำนวนที่ผลิตได้จริง (กล่อง)</label>
+                            <input type="number" id="prod-boxes" class="form-control" min="0" placeholder="ตัวอย่าง: 54" required>
+                            <div class="form-helper" id="boxes-helper">บรรจุ: 75ก. × 12ถุง/กล่อง</div>
+                        </div>
+                    </div>
+
+                    <!-- Computed Yield info (Helper overlay) -->
+                    <div class="form-group" style="background-color: rgba(255,255,255,0.03); border-radius: var(--border-radius-sm); padding: 8px 12px; margin-top: 4px; display: none;" id="yield-preview-container">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                            <span>น้ำหนักสินค้าสำเร็จรูป: <strong id="preview-fin-wt">0.00</strong> kg</span>
+                            <span>Yield ประเมิน: <strong id="preview-yield">0.00%</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Remarks -->
+                    <div class="form-group">
+                        <label for="prod-remarks">หมายเหตุ (ถ้ามี)</label>
+                        <input type="text" id="prod-remarks" class="form-control" placeholder="เช่น เครื่องจักรติดขัด, ปลาย่างขนาดเล็ก">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 8px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        บันทึกยอดการผลิต
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- History Records Table -->
+        <section class="card history-section">
+            <div class="table-header-wrapper">
+                <h3 style="font-size: 1.1rem; font-weight: 600;">ประวัติการผลิตรายวัน</h3>
+                <div class="float-info" id="history-count">พบ 0 รายการ</div>
+            </div>
+            
+            <div class="table-container">
+                <table id="history-table">
+                    <thead>
+                        <tr>
+                            <th>วันที่ผลิต</th>
+                            <th>รสชาติ</th>
+                            <th>ใช้วัตถุดิบปลาย่าง (kg)</th>
+                            <th>ผลิตได้ (กล่อง)</th>
+                            <th>น้ำหนักสำเร็จรูป (kg)</th>
+                            <th>% Yield จริง</th>
+                            <th>หมายเหตุ</th>
+                            <th style="width: 80px; text-align: center;">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-tbody">
+                        <!-- Dynamic content -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">ข้อความแจ้งเตือน</div>
+
+    <script src="app.js"></script>
+</body>
+</html>
